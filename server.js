@@ -48,7 +48,7 @@ app.post('/pay', async (req, res) => {
             { headers: { Authorization: `Bearer ${accessToken}` } }
         );
 
-        res.json({ success: true, accessUrl: 'https://your-frontend-url.com/prediction.html' });
+        res.json({ success: true, accessUrl: 'https://perontips-frontend.vercel.app/' });
     } catch (error) {
         res.json({ success: false, message: 'Payment failed' });
     }
