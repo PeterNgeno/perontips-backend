@@ -31,7 +31,7 @@ app.post('/pay', async (req, res) => {
         const accessToken = await getAccessToken();
 
         const response = await axios.post(
-            'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
+            'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
             {
                 BusinessShortCode: BUSINESS_SHORTCODE,
                 Password: password,
