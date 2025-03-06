@@ -12,18 +12,30 @@ const {
     BUSINESS_SHORTCODE, PASSKEY, CALLBACK_URL
 } = process.env;
 
+// Root route to check if the server is running
+app.get('/', (req, res) => {
+    res.send('PeronTips Backend is running...');
+});
+
 // Generate access token
 async function getAccessToken() {
-    const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
-    const response = await axios.get('https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
-        headers: { Authorization: `Basic ${auth}` }
-    });
-    return response.data.access_token;
+    try {
+        const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
+        const response = await axios.get('https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', {
+            headers: { Authorization: `Basic ${auth}` }
+        });
+        return response.data.access_token;
+    } catch (error) {
+        console.error('Access Token Error:', error?.response?.data || error.message);
+        throw new Error('Failed to obtain access token');
+    }
 }
 
 // Handle STK Push
 app.post('/pay', async (req, res) => {
     const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: "Phone number is required" });
+
     const timestamp = new Date().toISOString().replace(/[-T:Z]/g, '');
     const password = Buffer.from(`${BUSINESS_SHORTCODE}${PASSKEY}${timestamp}`).toString('base64');
 
@@ -50,8 +62,9 @@ app.post('/pay', async (req, res) => {
 
         res.json({ success: true, accessUrl: 'https://perontips-frontend.vercel.app/' });
     } catch (error) {
-        res.json({ success: false, message: 'Payment failed' });
+        console.error("Payment Error:", error?.response?.data || error.message);
+        res.status(500).json({ success: false, message: 'Payment failed', error: error.message });
     }
 });
 
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+app.listen(PORT || 5000, () => console.log(`Backend running on port ${PORT || 5000}`));
