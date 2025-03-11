@@ -14,7 +14,12 @@ const {
 
 // Root route to check if the server is running
 app.get('/', (req, res) => {
-    res.send('PeronTips Backend is running...');
+    res.send('Server is running...');
+});
+
+// New API endpoint for predictions
+app.get('/api/predictions', (req, res) => {
+    res.json({ message: "Predictions endpoint working" });
 });
 
 // Generate access token
