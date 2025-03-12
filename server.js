@@ -48,6 +48,10 @@ app.post('/pay', async (req, res) => {
     }
 
     const timestamp = new Date().toISOString().replace(/[-T:Z]/g, '');
+    app.post('/callback', (req, res) => {
+        console.log("Mpesa Callback Received:", req.body);
+        res.status(200).json({ message: "Callback received successfully" });
+    });
     const password = Buffer.from('${BUSINESS_SHORTCODE}${PASSKEY}${timestamp}').toString('base64');
 
     try {
