@@ -1,7 +1,7 @@
-reqpress = require('express');
+const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const exs = require('axios');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -22,14 +22,20 @@ app.get('/api/predictions', (req, res) => {
     res.json({ message: "Predictions endpoint working" });
 });
 
+// Callback Route (move outside of /pay)
+app.post('/callback', (req, res) => {
+    console.log("Mpesa Callback Received:", req.body);
+    res.status(200).json({ message: "Callback received successfully" });
+});
+
 // Generate access token (Sandbox)
 async function getAccessToken() {
     try {
-        const auth = Buffer.from('${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}').toString('base64');
+        const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
 
         const response = await axios.get(
             'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', 
-            { headers: { Authorization: 'Basic ${auth}' } }
+            { headers: { Authorization: `Basic ${auth}` } }
         );
 
         console.log("Access Token Retrieved:", response.data.access_token);
@@ -48,11 +54,7 @@ app.post('/pay', async (req, res) => {
     }
 
     const timestamp = new Date().toISOString().replace(/[-T:Z]/g, '');
-    app.post('/callback', (req, res) => {
-        console.log("Mpesa Callback Received:", req.body);
-        res.status(200).json({ message: "Callback received successfully" });
-    });
-    const password = Buffer.from('${BUSINESS_SHORTCODE}${PASSKEY}${timestamp}').toString('base64');
+    const password = Buffer.from(`${BUSINESS_SHORTCODE}${PASSKEY}${timestamp}`).toString('base64');
 
     try {
         const accessToken = await getAccessToken();
@@ -72,7 +74,7 @@ app.post('/pay', async (req, res) => {
                 AccountReference: 'PeronTips',
                 TransactionDesc: 'Betting Prediction'
             },
-            { headers: { Authorization: 'Bearer ${accessToken}' } }
+            { headers: { Authorization: `Bearer ${accessToken}` } }
         );
 
         console.log("STK Push Response:", response.data);
@@ -84,4 +86,4 @@ app.post('/pay', async (req, res) => {
     }
 });
 
-app.listen(PORT || 5000, () => console.log('Backend running on port ${PORT || 5000}'));
+app.listen(PORT || 5000, () => console.log(`Backend running on port ${PORT || 5000}`));
