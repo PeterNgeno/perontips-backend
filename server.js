@@ -28,13 +28,13 @@ app.post('/callback', (req, res) => {
     res.status(200).json({ message: "Callback received successfully" });
 });
 
-// Generate access token (Sandbox)
+// Generate access token (Live)
 async function getAccessToken() {
     try {
         const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
 
         const response = await axios.get(
-            'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', 
+            'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials', 
             { headers: { Authorization: `Basic ${auth}` } }
         );
 
@@ -46,7 +46,7 @@ async function getAccessToken() {
     }
 }
 
-// Handle STK Push (Sandbox)
+// Handle STK Push (Live)
 app.post('/pay', async (req, res) => {
     const { phone } = req.body;
     if (!phone) {
@@ -60,7 +60,7 @@ app.post('/pay', async (req, res) => {
         const accessToken = await getAccessToken();
 
         const response = await axios.post(
-            'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
+            'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
             {
                 BusinessShortCode: BUSINESS_SHORTCODE,
                 Password: password,
