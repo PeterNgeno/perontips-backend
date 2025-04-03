@@ -7,57 +7,67 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const { PORT, DARAJA_CONSUMER_KEY, DARAJA_CONSUMER_SECRET, BUSINESS_SHORTCODE, PASSKEY, CALLBACK_URL } = process.env;
+const { 
+    PORT, 
+    DARAJA_CONSUMER_KEY, 
+    DARAJA_CONSUMER_SECRET, 
+    BUSINESS_SHORTCODE, 
+    PASSKEY, 
+    CALLBACK_URL 
+} = process.env;
 
-// Log environment variables
-console.log("DARAJA_CONSUMER_KEY:", DARAJA_CONSUMER_KEY);
-console.log("DARAJA_CONSUMER_SECRET:", DARAJA_CONSUMER_SECRET);
+// Log environment variables (For Debugging)
+console.log("DARAJA_CONSUMER_KEY:", DARAJA_CONSUMER_KEY ? "Loaded" : "Missing");
+console.log("DARAJA_CONSUMER_SECRET:", DARAJA_CONSUMER_SECRET ? "Loaded" : "Missing");
 console.log("BUSINESS_SHORTCODE:", BUSINESS_SHORTCODE);
-console.log("PASSKEY:", PASSKEY);
 console.log("CALLBACK_URL:", CALLBACK_URL);
 
-// Root route to check if the server is running
+// Root route
 app.get('/', (req, res) => {
     res.send('Server is running...');
 });
 
-// New API endpoint for predictions
+// API for predictions
 app.get('/api/predictions', (req, res) => {
     res.json({ message: "Predictions endpoint working" });
 });
 
-// Callback Route
+// M-Pesa Callback Route
 app.post('/callback', (req, res) => {
-    console.log("Mpesa Callback Received:", req.body);
+    console.log("Mpesa Callback Received:", JSON.stringify(req.body, null, 2));
     res.status(200).json({ message: "Callback received successfully" });
 });
 
-// Generate access token (Live)
+// Generate M-Pesa Access Token
 async function getAccessToken() {
     try {
         const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
 
         const response = await axios.get(
             'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-            { headers: { Authorization: `Basic ${auth}` } }
+            { 
+                headers: { Authorization: `Basic ${auth}` } 
+            }
         );
 
-        console.log("Access Token Retrieved:", response.data.access_token);
+        console.log("Access Token Retrieved:", response.data);
         return response.data.access_token;
+
     } catch (error) {
         console.error('Access Token Error:', error?.response?.data || error.message);
         throw new Error('Failed to obtain access token');
     }
 }
 
-// Handle STK Push (Live)
+// Handle STK Push Payment
 app.post('/pay', async (req, res) => {
     const { phone } = req.body;
+    
     if (!phone) {
         return res.status(400).json({ success: false, message: "Phone number is required" });
     }
 
-    const timestamp = new Date().toISOString().replace(/[-T:Z]/g, '');
+    const timestamp = new Date().toISOString().replace(/[-T:Z]/g, '').slice(0, 14); // Ensure valid timestamp
     const password = Buffer.from(`${BUSINESS_SHORTCODE}${PASSKEY}${timestamp}`).toString('base64');
 
     try {
