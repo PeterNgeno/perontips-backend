@@ -16,6 +16,9 @@ const {
     CALLBACK_URL 
 } = process.env;
 
+let accessToken = null;
+let tokenExpiry = 0;
+
 // Log environment variables (For Debugging)
 console.log("DARAJA_CONSUMER_KEY:", DARAJA_CONSUMER_KEY ? "Loaded" : "Missing");
 console.log("DARAJA_CONSUMER_SECRET:", DARAJA_CONSUMER_SECRET ? "Loaded" : "Missing");
@@ -38,20 +41,28 @@ app.post('/callback', (req, res) => {
     res.status(200).json({ message: "Callback received successfully" });
 });
 
-// Generate M-Pesa Access Token
+// Generate and Cache Access Token
 async function getAccessToken() {
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    if (accessToken && currentTime < tokenExpiry) {
+        console.log("Using cached access token");
+        return accessToken;
+    }
+
     try {
         const auth = Buffer.from(`${DARAJA_CONSUMER_KEY}:${DARAJA_CONSUMER_SECRET}`).toString('base64');
 
         const response = await axios.get(
             'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-            { 
-                headers: { Authorization: `Basic ${auth}` } 
-            }
+            { headers: { Authorization: `Basic ${auth}` } }
         );
 
-        console.log("Access Token Retrieved:", response.data);
-        return response.data.access_token;
+        accessToken = response.data.access_token;
+        tokenExpiry = currentTime + parseInt(response.data.expires_in) - 10; // 10 sec buffer
+
+        console.log("New Access Token Retrieved:", accessToken);
+        return accessToken;
 
     } catch (error) {
         console.error('Access Token Error:', error?.response?.data || error.message);
@@ -95,6 +106,12 @@ app.post('/pay', async (req, res) => {
         res.json({ success: true, accessUrl: 'https://perontips-frontend.vercel.app/' });
 
     } catch (error) {
+        if (error.response?.status === 401 || error.response?.data?.errorMessage?.includes("Invalid Access Token")) {
+            console.warn("Access Token Expired. Refreshing...");
+            accessToken = null; // Force token refresh
+            return app.post('/pay', req, res); // Retry payment
+        }
+
         console.error("Payment Error:", error?.response?.data || error.message);
         res.status(500).json({ success: false, message: 'Payment failed', error: error?.response?.data || error.message });
     }
